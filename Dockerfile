@@ -24,17 +24,14 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copy existing application directory contents
+COPY . /var/www/html
+
 # Set Apache Document Root to Laravel's public folder
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
-
-# Restart Apache
-RUN service apache2 restart
-
-# Copy existing application directory contents
-COPY . /var/www/html
 
 # Install application dependencies
 RUN composer install --no-dev --optimize-autoloader
