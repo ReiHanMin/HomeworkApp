@@ -1,5 +1,5 @@
 # Use the official PHP image with Apache
-FROM php:8.1-apache
+FROM php:8.2-apache
 
 # Set working directory
 WORKDIR /var/www/html
@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     zip \
-    unzip
+    unzip \
+    git \
+    curl
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -26,7 +28,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . /var/www/html
 
 # Install application dependencies
-RUN composer install
+RUN composer install --no-dev --optimize-autoloader
 
 # Set file permissions
 RUN chown -R www-data:www-data /var/www/html \
