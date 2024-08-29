@@ -43,3 +43,7 @@ RUN chown -R www-data:www-data /var/www/html \
 # Expose port 80 and start Apache
 EXPOSE 80
 CMD ["apache2-foreground"]
+
+# Set permissions for storage and cache directories
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
