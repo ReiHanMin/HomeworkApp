@@ -25,13 +25,19 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy existing application directory contents
 COPY . /var/www/html
 
-# Configure Apache to use only one Listen directive
-RUN sed -i '/^Listen 80$/d' /etc/apache2/ports.conf
+# Remove duplicate Listen directives and set the correct Listen port
+RUN sed -i '/^Listen 80$/d' /etc/apache2/ports.conf \
+    && echo "Listen 80" >> /etc/apache2/ports.conf
 
-# Set ServerName directive to prevent domain name warning
+# Set ServerName directive to suppress the domain name warning
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Ensure correct permissions for Apache
+# Ensure Apache log directory exists and has correct permissions
+RUN mkdir -p /var/log/apache2 \
+    && chown -R www-data:www-data /var/log/apache2 \
+    && chmod -R 755 /var/log/apache2
+
+# Ensure correct permissions for the web application directory
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
