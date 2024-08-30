@@ -28,15 +28,15 @@ COPY . /var/www/html
 # Set Apache to use the Laravel public directory
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
+# Set the DirectoryIndex to index.php
+RUN echo "DirectoryIndex index.php" >> /etc/apache2/apache2.conf
+
 # Enable Apache modules and set ServerName directive to suppress warnings
 RUN a2enmod rewrite && echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Ensure correct permissions for the web application directory
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
-
-# Install application dependencies
-RUN composer install
 
 # Expose port 80 and start Apache
 EXPOSE 80
