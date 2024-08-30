@@ -28,12 +28,15 @@ COPY . /var/www/html
 # Configure Apache to use only one Listen directive
 RUN sed -i '/^Listen 80$/d' /etc/apache2/ports.conf
 
-# Install application dependencies
-RUN composer install
+# Set ServerName directive to prevent domain name warning
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Set file permissions
+# Ensure correct permissions for Apache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
+
+# Install application dependencies
+RUN composer install
 
 # Expose port 80 and start Apache
 EXPOSE 80
