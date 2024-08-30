@@ -1,9 +1,6 @@
 # Use the official PHP image with Apache
 FROM php:8.2-apache
 
-# Set environment variable for the port
-ENV PORT 80
-
 # Set working directory
 WORKDIR /var/www/html
 
@@ -28,21 +25,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy existing application directory contents
 COPY . /var/www/html
 
-# Set the ServerName to localhost to suppress Apache warnings
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Update Apache to listen on the environment variable PORT
-RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
-
-# Expose port 80
-EXPOSE 80
+# Configure Apache to use only one Listen directive
+RUN sed -i '/^Listen 80$/d' /etc/apache2/ports.conf
 
 # Install application dependencies
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install
 
 # Set file permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
-# Start Apache in the foreground
+# Expose port 80 and start Apache
+EXPOSE 80
 CMD ["apache2-foreground"]
