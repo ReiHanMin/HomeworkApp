@@ -25,18 +25,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy existing application directory contents
 COPY . /var/www/html
 
-# Set the DirectoryIndex to index.php
-RUN echo "<Directory /var/www/html/> \n\
-    Options Indexes FollowSymLinks \n\
-    AllowOverride All \n\
-    DirectoryIndex index.php \n\
-</Directory>" > /etc/apache2/sites-available/000-default.conf
+# Set Apache to use the Laravel public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Enable the Apache rewrite module
-RUN a2enmod rewrite
-
-# Set ServerName directive to suppress the domain name warning
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+# Enable Apache modules and set ServerName directive to suppress warnings
+RUN a2enmod rewrite && echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Ensure correct permissions for the web application directory
 RUN chown -R www-data:www-data /var/www/html \
