@@ -25,17 +25,18 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy existing application directory contents
 COPY . /var/www/html
 
-# Remove duplicate Listen directives and set the correct Listen port
-RUN sed -i '/^Listen 80$/d' /etc/apache2/ports.conf \
-    && echo "Listen 80" >> /etc/apache2/ports.conf
+# Set the DirectoryIndex to index.php
+RUN echo "<Directory /var/www/html/> \n\
+    Options Indexes FollowSymLinks \n\
+    AllowOverride All \n\
+    DirectoryIndex index.php \n\
+</Directory>" > /etc/apache2/sites-available/000-default.conf
+
+# Enable the Apache rewrite module
+RUN a2enmod rewrite
 
 # Set ServerName directive to suppress the domain name warning
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Ensure Apache log directory exists and has correct permissions
-RUN mkdir -p /var/log/apache2 \
-    && chown -R www-data:www-data /var/log/apache2 \
-    && chmod -R 755 /var/log/apache2
 
 # Ensure correct permissions for the web application directory
 RUN chown -R www-data:www-data /var/www/html \
