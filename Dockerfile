@@ -1,6 +1,9 @@
 # Use the official PHP image with Apache
 FROM php:8.2-apache
 
+# Set environment variable for the port
+ENV PORT 80
+
 # Set working directory
 WORKDIR /var/www/html
 
@@ -13,9 +16,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     zip \
-    unzip \
-    git \
-    curl
+    unzip
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -27,11 +28,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy existing application directory contents
 COPY . /var/www/html
 
-# Set Apache Document Root to Laravel's public folder
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# Set the ServerName to localhost to suppress Apache warnings
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Update Apache to listen on the environment variable PORT
+RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
+
+# Expose port 80
+EXPOSE 80
 
 # Install application dependencies
 RUN composer install --no-dev --optimize-autoloader
@@ -40,10 +44,5 @@ RUN composer install --no-dev --optimize-autoloader
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
-# Expose port 80 and start Apache
-EXPOSE 80
+# Start Apache in the foreground
 CMD ["apache2-foreground"]
-
-# Set permissions for storage and cache directories
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
