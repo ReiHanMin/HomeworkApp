@@ -10,4 +10,11 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    build: {
+        outDir: 'public/build', // Ensure the output is in the correct directory
+        manifest: true, // Generate a manifest file
+        rollupOptions: {
+            input: 'resources/js/app.js',
+        },
+    },
 });
