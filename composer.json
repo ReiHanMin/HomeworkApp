@@ -43,9 +43,14 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
         "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
+            "@php artisan key:generate --ansi"
+        ],
+        "heroku-post-build": [
+            "composer install --no-dev --optimize-autoloader",
+            "php artisan key:generate",
+            "php artisan config:cache",
+            "php artisan route:cache",
+            "php artisan view:cache"
         ]
     },
     "extra": {
