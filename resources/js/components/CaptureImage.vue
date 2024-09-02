@@ -14,21 +14,37 @@
           Choose File
         </label>
         <input id="file-upload" type="file" accept="image/*" @change="onFileChange" />
-        <button @click="cropImage" class="crop-button" v-if="image">Crop Image</button>
+      </div>
+    </div>
+
+    <!-- Image Preview and Crop Option -->
+    <div class="card" v-if="image && !croppedImage && !isCropping">
+      <h2>Image Preview</h2>
+      <img :src="image" alt="Uploaded Image Preview" class="image-preview" />
+      <div class="button-group">
+        <button @click="cropImage" class="crop-button">Crop Image</button>
+        <button @click="uploadImage" class="upload-button">Upload Without Cropping</button>
       </div>
     </div>
 
     <!-- Image Cropper -->
-    <div class="cropper-container" v-if="image && !croppedImage">
+    <div class="cropper-container" v-if="image && !croppedImage && isCropping">
       <img ref="image" :src="image" alt="Captured Image" class="image-to-crop" />
-      <button @click="confirmCrop" class="confirm-crop-button">Confirm Crop</button>
+      <div class="button-group">
+        <button @click="confirmCrop" class="confirm-crop-button">Confirm Crop</button>
+        <button @click="cancelCrop" class="cancel-crop-button">Cancel Crop</button>
+      </div>
     </div>
 
     <!-- Cropped Image Preview -->
     <div class="card" v-if="croppedImage">
       <h2>Cropped Image Preview</h2>
       <img :src="croppedImage" alt="Cropped Image Preview" class="image-preview" />
-      <button @click="uploadImage" class="upload-button">Upload Cropped Image</button>
+      <div class="button-group">
+        <button @click="recropImage" class="recrop-button">Recrop Image</button>
+        <button @click="uploadImage" class="upload-button">Upload Cropped Image</button>
+        <button @click="resetImage" class="reset-button">Reset and Start Over</button>
+      </div>
     </div>
 
     <!-- User Input Section -->
@@ -64,6 +80,7 @@ export default {
       gptResponse: '',
       manualInput: '',
       cropper: null,
+      isCropping: false,
     };
   },
   computed: {
@@ -78,17 +95,23 @@ export default {
     onFileChange(event) {
       this.image = URL.createObjectURL(event.target.files[0]);
       this.croppedImage = null;  // Reset cropped image when a new file is selected
+      this.isCropping = false;   // Reset cropping state
     },
     cropImage() {
-      if (this.cropper) {
-        this.cropper.destroy();
-      }
+      this.isCropping = true; // Enable cropping mode
 
-      const imageElement = this.$refs.image;
-      this.cropper = new Cropper(imageElement, {
-        aspectRatio: NaN, // Free aspect ratio
-        viewMode: 1,
-        autoCropArea: 1,
+      // Use nextTick to ensure the DOM is updated before initializing the Cropper
+      this.$nextTick(() => {
+        const imageElement = this.$refs.image;
+        if (imageElement) {
+          this.cropper = new Cropper(imageElement, {
+            aspectRatio: NaN, // Free aspect ratio
+            viewMode: 1,
+            autoCropArea: 1,
+          });
+        } else {
+          console.error("Image element not found");
+        }
       });
     },
     confirmCrop() {
@@ -96,11 +119,29 @@ export default {
         this.croppedImage = this.cropper.getCroppedCanvas().toDataURL('image/png');
         this.cropper.destroy();
         this.cropper = null;
+        this.isCropping = false; // Disable cropping mode
       }
+    },
+    cancelCrop() {
+      if (this.cropper) {
+        this.cropper.destroy();
+        this.cropper = null;
+        this.isCropping = false; // Disable cropping mode
+      }
+    },
+    recropImage() {
+      this.croppedImage = null;  // Remove the cropped image
+      this.isCropping = true;    // Re-enable cropping mode
+      this.cropImage();          // Restart the cropping process
+    },
+    resetImage() {
+      this.image = null;        // Remove the original image
+      this.croppedImage = null; // Remove the cropped image
+      this.isCropping = false;  // Reset cropping state
     },
     async uploadImage() {
       const formData = new FormData();
-      const blob = await fetch(this.croppedImage).then((r) => r.blob());
+      const blob = await fetch(this.croppedImage || this.image).then((r) => r.blob());
       formData.append('image', blob, 'cropped-image.png');
 
       try {
@@ -141,6 +182,7 @@ export default {
 };
 </script>
 
+
 <style scoped>
 /* Global Styles */
 body {
@@ -148,6 +190,7 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f4f9;
   color: #333;
+  line-height: 1.6;
 }
 
 /* App Container */
@@ -181,29 +224,21 @@ body {
   border-radius: 10px;
   margin-bottom: 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.card h2 {
-  font-size: 24px;
-  color: #333;
-  margin-bottom: 15px;
-}
-
-/* Upload Section */
-.upload-section {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 20px;
-  flex-wrap: wrap; /* Makes items wrap on small screens */
 }
 
+/* Button Styles */
 .custom-file-upload,
 .submit-button,
-.upload-button {
+.upload-button,
+.crop-button,
+.confirm-crop-button,
+.cancel-crop-button,
+.recrop-button,
+.reset-button {
   padding: 12px 25px;
-  background-color: #007bff;
   color: white;
   border-radius: 5px;
   cursor: pointer;
@@ -211,21 +246,90 @@ body {
   font-size: 16px;
   transition: background-color 0.3s ease;
   border: none;
-  margin-top: 10px; /* Added margin for mobile spacing */
+  margin-top: 10px;
+  width: calc(100% - 20px);
+  max-width: 300px;
+}
+
+/* Primary Action Buttons */
+.custom-file-upload,
+.upload-button {
+  background-color: #007bff; /* Blue for primary actions */
 }
 
 .custom-file-upload:hover,
-.submit-button:hover,
 .upload-button:hover {
   background-color: #0056b3;
 }
+
+/* Secondary Action Button */
+.crop-button {
+  background-color: #28a745; /* Green for cropping action */
+}
+
+.crop-button:hover {
+  background-color: #218838;
+}
+
+/* Alternative Action Button */
+.confirm-crop-button {
+  background-color: #ffc107; /* Yellow for confirming crop */
+  margin-right: 10px; /* Add some space between confirm and cancel */
+}
+
+.confirm-crop-button:hover {
+  background-color: #e0a800;
+}
+
+/* Cancel Action Button */
+.cancel-crop-button {
+  background-color: #dc3545; /* Red for cancel action */
+}
+
+.cancel-crop-button:hover {
+  background-color: #c82333;
+}
+
+/* Recrop and Reset Buttons */
+.recrop-button {
+  background-color: #6c757d; /* Gray for recrop */
+  margin-right: 10px; /* Add some space between recrop and reset */
+}
+
+.recrop-button:hover {
+  background-color: #5a6268;
+}
+
+.reset-button {
+  background-color: #343a40; /* Darker gray for reset */
+}
+
+.reset-button:hover {
+  background-color: #23272b;
+}
+.submit-button {
+  background-color: #007bff; /* Blue for active state */
+}
+
+.submit-button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* If there is a disabled state */
+.submit-button:disabled {
+  background-color: #e9ecef; /* Light gray for disabled state */
+  color: #6c757d; /* Text color for disabled state */
+  cursor: not-allowed; /* Cursor style for disabled button */
+}
+
 
 #file-upload {
   display: none;
 }
 
 textarea {
-  width: 100%;
+  width: calc(100% - 20px);
+  max-width: 300px;
   padding: 10px;
   margin-bottom: 20px;
   border-radius: 5px;
@@ -243,54 +347,6 @@ textarea {
   border-radius: 8px;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-}
-
-/* Results Section */
-.results-card {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
-}
-
-.results-card:hover {
-  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
-}
-
-.results-card h2 {
-  font-size: 20px;
-  margin-bottom: 10px;
-  color: #333;
-}
-
-/* Answer Card Styles */
-.answer-card {
-  background-color: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.answer-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.1);
-}
-
-.answer-card p {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #555;
-  text-align: justify;
-  margin-bottom: 10px;
-}
-
-.answer-card strong {
-  color: #333;
-  font-weight: bold;
 }
 
 /* Media Queries for Mobile Responsiveness */
@@ -319,110 +375,22 @@ textarea {
   }
 
   .upload-section {
-    flex-direction: column; /* Stack items vertically on mobile */
+    flex-direction: column;
     gap: 10px;
   }
 
   .custom-file-upload,
   .submit-button,
-  .upload-button {
+  .upload-button,
+  .crop-button,
+  .confirm-crop-button,
+  .cancel-crop-button,
+  .recrop-button,
+  .reset-button {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     font-size: 14px;
-  }
-
-  .answer-card {
-    padding: 10px;
-    margin-bottom: 10px;
-  }
-
-  .answer-card p {
-    font-size: 14px;
+    margin-top: 5px;
   }
 }
-.image-to-crop {
-  max-width: 100%;
-  height: auto;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-.confirm-crop-button {
-  padding: 12px 25px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
-}
-
-.confirm-crop-button:hover {
-  background-color: #218838;
-}
-
-
-/* Cropper container styles */
-.cropper-container {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-
-
-/* Button Styles */
-.custom-file-upload,
-.submit-button,
-.upload-button,
-.crop-button,  /* Added crop-button styling */
-.confirm-crop-button {
-  padding: 12px 25px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
-  margin-right: 5px; /* Adds slight spacing between buttons */
-}
-
-.custom-file-upload:hover,
-.submit-button:hover,
-.upload-button:hover,
-.crop-button:hover, /* Hover styling for crop button */
-.confirm-crop-button:hover {
-  background-color: #0056b3;
-}
-
-#file-upload {
-  display: none;
-}
-
-textarea {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 20px;
-  border-radius: 5px;
-  border: 1px solid #ddd;
-  font-size: 16px;
-  font-family: 'Arial', sans-serif;
-  resize: none;
-}
-
-/* Image Preview */
-.image-preview {
-  max-width: 100%;
-  height: auto;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
 </style>
